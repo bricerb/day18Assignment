@@ -28,7 +28,7 @@ public class SerializationTester {
              System.out.println("retrieved TD = " + retrievedTD);
 
 
-            String jsonTD = jsonSave(testTD);
+            String jsonTD = jsonStringGenerator(testTD);
             System.out.println("JSON ToDo = " + jsonTD);
 
             ToDoItem restoredFromJSON = jsonRestore(jsonTD);
@@ -56,7 +56,7 @@ public class SerializationTester {
         return restoredTD;
     }
 
-    public String jsonSave(ToDoItem todoToSave) {
+    public String jsonStringGenerator(ToDoItem todoToSave) {
         JsonSerializer jsonSerializer = new JsonSerializer().deep(true);
         String jsonString = jsonSerializer.serialize(todoToSave);
 
@@ -70,5 +70,5 @@ public class SerializationTester {
         return item;
     }
 
-    
+
 }

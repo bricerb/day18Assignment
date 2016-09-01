@@ -15,21 +15,17 @@ import javafx.scene.input.KeyEvent;
 import jodd.json.JsonParser;
 import jodd.json.JsonSerializer;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Observable;
 import java.util.ResourceBundle;
 import java.util.Scanner;
 
 
 public class Controller implements Initializable {
 
-    Main runner = new Main();
-
     private String userName;
-
-    private String DATA_FILE_NAME = (userName + "-todoList.txt");
 
     @FXML
     ListView todoList;
@@ -42,28 +38,31 @@ public class Controller implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setUserName();
-//        todoItems.equals(readFromFile(getUserName()));
+        todoItems.equals(readFromFile(getUserName()));
 
         todoList.setItems(todoItems);
     }
 
+    public String getUserName() {
+        return userName;
+    }
+
     public void setUserName() {
         Scanner inputScanner = new Scanner(System.in);
-        Main runner = new Main();
         System.out.println("What's your name?");
-        userName = inputScanner.next();
+        this.userName = inputScanner.next();
     }
 
     public void addItem() {
-        todoItems.add(new ToDoItem(todoText.getText()));
+        todoItems.add(new ToDoItem(todoText.getText()));;
         todoText.setText("");
-        writeToFile();
+        writeUserFile();
     }
 
     public void removeItem() {
         ToDoItem todoItem = (ToDoItem)todoList.getSelectionModel().getSelectedItem();
         todoItems.remove(todoItem);
-        writeToFile();
+        writeUserFile();
     }
 
     public void toggleItem() {
@@ -72,17 +71,17 @@ public class Controller implements Initializable {
             todoItem.isDone = !todoItem.isDone;
             todoList.setItems(null);
             todoList.setItems(todoItems);
-            writeToFile();
         }
+        writeUserFile();
     }
 
     public void toggleAll() {
         for (ToDoItem currToDoItem : todoItems) {
             currToDoItem.isDone = !currToDoItem.isDone;
         }
-        writeToFile();
         todoList.setItems(null);
         todoList.setItems(todoItems);
+        writeUserFile();
     }
 
     public void allDone() {
@@ -91,57 +90,77 @@ public class Controller implements Initializable {
                 currToDoItem.isDone = true;
             }
         }
-        writeToFile();
         todoList.setItems(null);
         todoList.setItems(todoItems);
+        writeUserFile();
     }
 
     public void allNotDone() {
         for (ToDoItem currToDoItem : todoItems) {
             currToDoItem.isDone = !true;
         }
-        writeToFile();
         todoList.setItems(null);
         todoList.setItems(todoItems);
+        writeUserFile();
     }
 
-    public String jsonSave() {
+    public void writeUserFile() {
+        FileWriter writeToFile = null;
+        try {
+            File userFile = new File(getUserName() + "-todoList.txt");
+            writeToFile = new FileWriter(userFile);
+
+            ToSaveContainer containerClass = new ToSaveContainer();
+            for (ToDoItem currentToDoItem : todoItems) {
+                containerClass.addToContainerList(currentToDoItem);
+            }
+            writeToFile.write(jsonStringGenerator(containerClass));
+            writeToFile.close();
+
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        } finally {
+            if (writeToFile != null) {
+                try {
+                    writeToFile.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public ListView readFromFile (String userName) {
+        try {
+            File userFile = new File(userName + "-todoList.txt");
+            Scanner fileScanner = new Scanner(userFile);
+
+            String scanString = null;
+            scanString = fileScanner.nextLine();
+
+            ToSaveContainer container = jsonRestore(scanString);
+            for (ToDoItem currentItem : container.getContainerList()) {
+                todoItems.add(currentItem);
+            }
+            todoList.setItems(null);
+            todoList.setItems(todoItems);
+        } catch (Exception exception) {
+        }
+        return todoList;
+    }
+
+    public String jsonStringGenerator(ToSaveContainer todoToSave) {
         JsonSerializer jsonSerializer = new JsonSerializer().deep(true);
-        String jsonString = jsonSerializer.serialize(prepareContainer());
+        String jsonString = jsonSerializer.serialize(todoToSave);
 
         return jsonString;
     }
 
-    public void saveList(ArrayList<ToDoItem> todoToSave) throws IOException {
-        FileOutputStream fos = new FileOutputStream(DATA_FILE_NAME);
-        ObjectOutput objectOut = new ObjectOutputStream(fos);
-        objectOut.writeObject(todoToSave);
-        objectOut.flush();
-    }
-
-    public ToDoItem jsonRestore(String jsonTD) {
-
+    public ToSaveContainer jsonRestore(String jsonTD) {
         JsonParser toDoItemParser = new JsonParser();
-        ToDoItem item = toDoItemParser.parse(jsonTD, ToDoItem.class);
+        ToSaveContainer item = toDoItemParser.parse(jsonTD, ToSaveContainer.class);
 
         return item;
-    }
-
-    public ArrayList<ToDoItem> prepareContainer() {
-        ArrayList<ToDoItem> array = new ArrayList<>();
-        if (todoItems != null) {
-            array.addAll(todoItems);
-        }
-        return array;
-    }
-
-    public void writeToFile() {
-        try {
-            saveList(prepareContainer());
-            jsonSave();
-        } catch (IOException ioEx) {
-
-        }
     }
 
 }
